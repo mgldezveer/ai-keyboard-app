@@ -1,0 +1,3 @@
+-keep class com.aikeyboard.app.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
