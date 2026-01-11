@@ -1,0 +1,59 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        run: |
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-*.zip
+          mkdir -p $HOME/Android/cmdline-tools/latest
+          mv cmdline-tools/* $HOME/Android/cmdline-tools/latest/
+          
+          echo "$ANDROID_HOME=$HOME/Android" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools" >> $GITHUB_ENV
+          
+          sdkmanager --update && yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          PATH: ${{ env.PATH }}
+
+      - name: Build APK
+        run: |
+          cd app
+          chmod +x ../gradlew
+          ../gradlew assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Build summary
+        run: |
+          echo "## Build Summary"
+          echo ""
+          echo "✅ Build Status: ${{ job.status }}"
+          echo ""
+          echo "📦 APK Location: app/build/outputs/apk/debug/"
+          echo ""
+          echo "📱 Project: AI Keyboard with ChatGPT"
+          echo "📦 Package: com.aikeyboard.app"
